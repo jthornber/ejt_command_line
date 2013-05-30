@@ -4,19 +4,6 @@ require 'set'
 #----------------------------------------------------------------
 
 module CommandLine
-  # from prelude
-  def bracket_(release)
-    r = nil
-    begin
-      r = yield
-    ensure
-      release.call
-    end
-    r
-  end
-
-  #----------------------------------------------------------------
-
   class CommandLineError < StandardError
   end
 
@@ -261,6 +248,16 @@ module CommandLine
       else
         raise ConfigureError, "unknown value type '#{sym}'"
       end
+    end
+
+    def bracket_(release)
+      r = nil
+      begin
+        r = yield
+      ensure
+        release.call
+      end
+      r
     end
   end
 end
