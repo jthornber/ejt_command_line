@@ -54,6 +54,32 @@ describe "Parser" do
     end
   end
 
+  describe "multi value types" do
+    it "should allow you to register new multi value types" do
+      @clh.configure do
+        multivalue_type :string do |str|
+          str
+        end
+
+        multivalue_type :int do |str|
+          str.to_i
+        end
+      end
+    end
+
+    it "should fail it you try and define a duplicate value type" do
+      @clh.value_type :string do |str|
+        str
+      end
+
+      expect do
+        @clh.value_type :string do |str|
+          str
+        end
+      end.to raise_error(ConfigureError, /string/)
+    end
+  end
+
   describe "switches are defined separately from commands" do
     it "should let you define binary switch" do
       help_switch
@@ -185,6 +211,25 @@ describe "Parser" do
         handler.should_receive(:global_command).
           with({:count => 17}, ['one', 'two'])
         @clh.parse(handler, 'one', '-c', '17', 'two')
+      end
+
+      it "should handle multivalued switches" do
+        handler = double()
+
+        @clh.configure do
+          multivalue_type :ints do |str|
+            str.to_i
+          end
+
+          value_switch :counts, :ints, '--count'
+          global do
+            switches :counts
+          end
+        end
+
+        handler.should_receive(:global_command).
+          with({:counts => [1, 3, 5]}, ['one', 'two'])
+        @clh.parse(handler, 'one', '--count', '1', 'two', '--count', '3', '--count', '5')
       end
 
       it "should raise an ArgumentError if no value is given for a valued switch" do
