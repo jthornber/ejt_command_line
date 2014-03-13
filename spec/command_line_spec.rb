@@ -15,7 +15,7 @@ describe "Parser" do
 
   describe "creation" do
     it "should take a config block" do
-      block_watcher = mock()
+      block_watcher = double()
       block_watcher.should_receive(:executed)
 
       clh = Parser.new do
@@ -149,18 +149,18 @@ describe "Parser" do
   describe "parsing" do
     describe "global command" do
       it "should handle no switches" do
-        handler = mock()
+        handler = double()
         handler.should_receive(:global_command).with({}, [])
         @clh.parse(handler)
       end
 
       it "should raise a ParseError if an unrecognised switch is used" do
-        handler = mock()
+        handler = double()
         expect {@clh.parse(handler, '--go-back-in-time')}.to raise_error(ParseError, /--go-back-in-time/)
       end
 
       it "should handle binary switches" do
-        handler = mock()
+        handler = double()
         handler.should_receive(:global_command).with({:help => true}, [])
 
         @clh.configure do
@@ -174,7 +174,7 @@ describe "Parser" do
       end
 
       it "should handle multiple binary switches" do
-        handler = mock()
+        handler = double()
         handler.should_receive(:global_command).with({:help => true, :ro => true}, [])
 
         @clh.configure do
@@ -190,7 +190,7 @@ describe "Parser" do
       end
 
       it "should handle valued switches" do
-        handler = mock()
+        handler = double()
 
         @clh.configure do
           value_type :int do |str|
@@ -233,7 +233,7 @@ describe "Parser" do
       end
 
       it "should raise an ArgumentError if no value is given for a valued switch" do
-        handler = mock()
+        handler = double()
 
         @clh.configure do
           value_type :int do |str|
@@ -253,7 +253,7 @@ describe "Parser" do
       end
 
       it "should filter non-switches out" do
-        handler = mock()
+        handler = double()
         handler.should_receive(:global_command).
           with({:help => true, :ro => true}, ['my_file', 'my_other_file'])
 
@@ -277,7 +277,7 @@ describe "Parser" do
           end
         end
 
-        handler = mock()
+        handler = double()
         handler.should_receive(:create).with({}, ['fred'])
         @clh.parse(handler, 'create', 'fred')
       end
@@ -310,13 +310,13 @@ describe "Parser" do
       end
 
       it "should allow you to define a sub command" do
-        handler = mock()
+        handler = double()
         handler.should_receive(:resize).with({:grow_to => 12345}, ['fred'])
         @clh.parse(handler, 'resize', '--grow-to', '12345', 'fred')
       end
 
       it "should prevent you calling two sub commands on the same line" do
-        handler = mock()
+        handler = double()
         handler.should_receive(:resize).
           with({:grow_to => 1234, :shrink_to => 2345}, ['shrink', 'fred'])
         @clh.parse(handler, 'resize', '--grow-to', '1234', 'shrink', '--shrink-to', '2345', 'fred')
@@ -342,14 +342,14 @@ describe "Parser" do
       end
 
       it "should parse one exclusive switch" do
-        handler = mock()
+        handler = double()
         handler.should_receive(:resize).
           with({:grow_to => 1234}, ['fred'])
         @clh.parse(handler, 'resize', '--grow-to', '1234', 'fred')
       end
 
       it "should raise a ParseError if more than one switch from an exclusive set is defined" do
-        handler = mock()
+        handler = double()
         expect do
           @clh.parse(handler, 'resize', '--grow-to', '1234', '--shrink-by', '2345', 'fred')
         end.to raise_error(ParseError, /mutually exclusive/)
@@ -385,14 +385,14 @@ describe "Parser" do
     end
 
     it "should parse ok if mandatory switch is given" do
-      handler = mock()
+      handler = double()
       handler.should_receive(:resize).
         with({:grow_to => 3}, ['fred'])
       @clh.parse(handler, 'resize', '--grow-to', '3', 'fred')
     end
 
     it "should raise a ParseError if a mandatory switch is omitted" do
-      handler = mock()
+      handler = double()
       expect do
         @clh.parse(handler, 'resize', 'fred')
       end.to raise_error(ParseError, /grow_to/)
