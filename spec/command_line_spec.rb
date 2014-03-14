@@ -54,32 +54,6 @@ describe "Parser" do
     end
   end
 
-  describe "multi value types" do
-    it "should allow you to register new multi value types" do
-      @clh.configure do
-        multivalue_type :string do |str|
-          str
-        end
-
-        multivalue_type :int do |str|
-          str.to_i
-        end
-      end
-    end
-
-    it "should fail it you try and define a duplicate value type" do
-      @clh.value_type :string do |str|
-        str
-      end
-
-      expect do
-        @clh.value_type :string do |str|
-          str
-        end
-      end.to raise_error(ConfigureError, /string/)
-    end
-  end
-
   describe "switches are defined separately from commands" do
     it "should let you define binary switch" do
       help_switch
@@ -96,6 +70,16 @@ describe "Parser" do
         end
 
         value_switch :resize_to, :volume_size, '--resize-to'
+      end
+    end
+
+    it "should let you define an option that can occur multiple times" do
+      @clh.configure do
+        value_type :filter do |str|
+          str
+        end
+
+        multivalue_switch :test_class, :filter, '--test-class'
       end
     end
   end
@@ -213,23 +197,24 @@ describe "Parser" do
         @clh.parse(handler, 'one', '-c', '17', 'two')
       end
 
-      it "should handle multivalued switches" do
+      it "should handle multivalue switches" do
         handler = double()
 
         @clh.configure do
-          multivalue_type :ints do |str|
+          value_type :int do |str|
             str.to_i
           end
 
-          value_switch :counts, :ints, '--count'
+          multivalue_switch :port, :int, '--port', '-p'
+
           global do
-            switches :counts
+            switches :port
           end
         end
 
         handler.should_receive(:global_command).
-          with({:counts => [1, 3, 5]}, ['one', 'two'])
-        @clh.parse(handler, 'one', '--count', '1', 'two', '--count', '3', '--count', '5')
+          with({:port => [8080, 8081]}, ['one', 'two'])
+        @clh.parse(handler, *%w[-p 8080 one -p 8081 two])
       end
 
       it "should raise an ArgumentError if no value is given for a valued switch" do

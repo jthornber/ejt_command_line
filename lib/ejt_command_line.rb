@@ -25,14 +25,13 @@ module CommandLine
 
   #----------------------------------------------------------------
 
-  ValueType = Struct.new(:parser, :multi)
-
   class Switch
-    attr_reader :flags, :value_type
+    attr_reader :flags, :parser, :multi
 
-    def initialize(flags, value_type = nil)
+    def initialize(flags, parser = nil, multi = false)
       @flags = flags
-      @value_type = value_type
+      @parser = parser
+      @multi = multi
     end
 
     def has_flag?(flag)
@@ -125,15 +124,7 @@ module CommandLine
         raise ConfigureError, "duplicate value type '#{sym}'"
       end
 
-      @value_types[sym] = ValueType.new(parser, false)
-    end
-
-    def multivalue_type(sym, &parser)
-      if @value_types.member?(sym)
-        raise ConfigureError, "duplicate value type '#{sym}'"
-      end
-
-      @value_types[sym] = ValueType.new(parser, true)
+      @value_types[sym] = parser
     end
 
     def simple_switch(sym, *flags)
@@ -141,7 +132,11 @@ module CommandLine
     end
 
     def value_switch(sym, value_sym, *flags)
-      @switches[sym] = Switch.new(flags, get_value_type(value_sym))
+      @switches[sym] = Switch.new(flags, get_value_parser(value_sym))
+    end
+
+    def multivalue_switch(sym, value_sym, *flags)
+      @switches[sym] = Switch.new(flags, get_value_parser(value_sym), true)
     end
 
     def global(&block)
@@ -184,23 +179,19 @@ module CommandLine
     end
 
     private
-    def parse_value(arg, s, args, old_value)
-      if s.value_type
+    def parse_value(arg, s, args, old_value = nil)
+      if s.parser
         if args.size == 0
           raise ParseError, "no value specified for switch '#{arg}'"
         end
 
         value = args.shift
         begin
-          v = s.value_type.parser.call(value)
-          if s.value_type.multi
-            if old_value.nil?
-              [v]
-            else
-              old_value << v
-            end
-          else
+          v = s.parser.call(value)
+          if old_value.nil?
             v
+          else
+            old_value << v
           end
         rescue => e
           raise ParseError, "couldn't parse value '#{arg}=#{value}'\n#{e}"
@@ -222,7 +213,12 @@ module CommandLine
 
         if arg =~ /^-/
           sym, s = find_switch(valid_switches, arg)
-          opts[sym] = parse_value(arg, s, args, opts[sym])
+
+          if s.multi
+            opts[sym] = parse_value(arg, s, args, opts[sym] || [])
+          else
+            opts[sym] = parse_value(arg, s, args)
+          end
 
         else
           cmd = arg.intern
@@ -261,9 +257,12 @@ module CommandLine
       end
     end
 
-    def get_value_type(sym)
-      raise ConfigureError, "unknown value type '#{sym}'" unless @value_types.member?(sym)
-      @value_types[sym]
+    def get_value_parser(sym)
+      if @value_types.member?(sym)
+        @value_types[sym]
+      else
+        raise ConfigureError, "unknown value type '#{sym}'"
+      end
     end
 
     def bracket_(release)
